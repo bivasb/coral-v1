@@ -1,0 +1,8 @@
+# Coral Server v1 Agent Registry
+# This file defines all available agents for the coral server
+
+[[local-agent]]
+path = "/workspace/interface-agent"
+
+[[local-agent]]
+path = "/workspace/unified-debug-agent"

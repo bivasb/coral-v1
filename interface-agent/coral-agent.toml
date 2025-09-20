@@ -1,0 +1,44 @@
+[agent]
+name = "interface-agent"
+version = "1.0.0"
+description = "User interaction agent that facilitates communication between users and other agents using the CAMEL AI framework. Handles user input and orchestrates conversations with specialized agents."
+
+[options.DEEPSEEK_API_KEY]
+type = "string"
+description = "DeepSeek API Key for LLM operations"
+
+[options.MODEL_NAME]
+type = "string"
+description = "What model to use"
+default = "deepseek-chat"
+
+[options.MODEL_PROVIDER]
+type = "string"
+description = "What model provider to use"
+default = "openai"
+
+[options.MODEL_TEMPERATURE]
+type = "string"
+description = "What model temperature to use"
+default = "0.1"
+
+[options.MODEL_MAX_TOKENS]
+type = "string"
+description = "Max tokens to use"
+default = "8000"
+
+[options.MODEL_BASE_URL]
+type = "string"
+description = "Model API base URL"
+default = "https://api.deepseek.com/v1"
+
+[options.TIMEOUT_MS]
+type = "string"
+description = "Connection/tool timeouts in ms"
+default = "300"
+
+[runtimes.executable]
+command = ["python3", "main.py"]
+
+[runtimes.docker]
+image = "python:3.11-slim"

@@ -1,0 +1,9 @@
+# Coral Server Configuration
+[server]
+port = 5555
+
+[docker]
+socket_path = "/var/run/docker.sock"
+
+[registry]
+file_path = "/config/registry.toml"
