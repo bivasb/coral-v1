@@ -53,4 +53,4 @@ description = "Codestral API Key for code fix generation"
 command = ["python3", "main.py"]
 
 [runtimes.docker]
-image = "python:3.11-slim"
+image = "coral-debug-agent:latest"

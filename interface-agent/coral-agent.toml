@@ -41,4 +41,4 @@ default = "300"
 command = ["python3", "main.py"]
 
 [runtimes.docker]
-image = "python:3.11-slim"
+image = "coral-interface-agent:latest"
