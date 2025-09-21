@@ -6,7 +6,6 @@ from camel.agents import ChatAgent  # creates Agents
 from camel.models import ModelFactory  # encapsulates LLM
 from camel.toolkits import HumanToolkit, MCPToolkit  # import tools
 from camel.toolkits.mcp_toolkit import MCPClient
-from camel.utils.mcp_client import ServerConfig
 from camel.types import ModelPlatformType, ModelType
 from dotenv import load_dotenv
 
@@ -19,13 +18,14 @@ from prompts import get_tools_description, get_user_message
 async def main():
     # Simply add the Coral server address as a tool
     coral_url = os.getenv("CORAL_SSE_URL", default = "http://localhost:5555/sse") + f"?agentId={os.getenv('CORAL_AGENT_ID', 'interface-agent')}&agentDescription=User interaction agent that facilitates communication between users and other agents"
-    server = MCPClient(ServerConfig(url=coral_url, timeout=3000000.0, sse_read_timeout=3000000.0, terminate_on_close=True, prefer_sse=True), timeout=3000000.0)
+    server = MCPClient(command_or_url=coral_url, timeout=3000000.0)
 
     mcp_toolkit = MCPToolkit([server])
-
-    async with mcp_toolkit as connected_mcp_toolkit:
+    
+    try:
+        await mcp_toolkit.connect()
         print("Connected to coral server.")
-        camel_agent = await create_interface_agent(connected_mcp_toolkit)
+        camel_agent = await create_interface_agent(mcp_toolkit)
 
         # Step the agent continuously
         for i in range(20):  #This should be infinite, but for testing we limit it to 20 to avoid accidental API fees
@@ -34,6 +34,8 @@ async def main():
             msgzerojson = msgzero.to_dict()
             print(msgzerojson)
             sleep(10)
+    finally:
+        await mcp_toolkit.disconnect()
 
 async def create_interface_agent(connected_mcp_toolkit):
     tools = connected_mcp_toolkit.get_tools()
@@ -57,7 +59,7 @@ async def create_interface_agent(connected_mcp_toolkit):
     model = ModelFactory.create(
         model_platform=ModelPlatformType[PLATFORM_TYPE],
         model_type=ModelType[MODEL_TYPE],
-        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        api_key=os.getenv("OPENAI_API_KEY"),
         model_config_dict=MODEL_CONFIG,
     )
     camel_agent = ChatAgent(  # create agent with our mcp tools

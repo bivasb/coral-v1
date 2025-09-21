@@ -7,6 +7,10 @@ description = "User interaction agent that facilitates communication between use
 type = "string"
 description = "DeepSeek API Key for LLM operations"
 
+[options.OPENAI_API_KEY]
+type = "string"
+description = "OpenAI API Key for LLM operations"
+
 [options.MODEL_NAME]
 type = "string"
 description = "What model to use"

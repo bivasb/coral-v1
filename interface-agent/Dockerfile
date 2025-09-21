@@ -13,9 +13,12 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN pip install uv
 
-COPY . .
-
+# Copy requirements first for better caching
+COPY requirements.txt /app/requirements.txt
 RUN uv pip install --system -r requirements.txt
+
+# Copy the rest of the application
+COPY . .
 
 EXPOSE 5555
 
