@@ -1,0 +1,53 @@
+# Stage 1: BUILD - Contains source code
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install uv build
+
+# Copy and install dependencies
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+
+# Copy source code
+COPY . .
+
+# Create optimized bytecode and remove source
+RUN python -O -m compileall -b . && \
+    find . -name "*.py" -not -path "./setup.py" -delete
+
+# Stage 2: PRODUCTION - Clean runtime
+FROM python:3.12-slim AS production
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/* && \
+    pip install uv
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt && \
+    rm requirements.txt
+
+# Copy only compiled bytecode and necessary files
+COPY --from=builder /build/*.pyc ./
+COPY --from=builder /build/**/*.pyc ./
+COPY --from=builder /build/patches ./patches/
+COPY --from=builder /build/coral-agent.toml ./
+
+# Create a minimal startup script
+RUN echo 'import sys; sys.path.insert(0, "."); exec(open("main.pyc", "rb").read())' > start.py
+
+EXPOSE 5555
+
+CMD ["python", "start.py"]

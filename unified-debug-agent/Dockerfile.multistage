@@ -1,0 +1,61 @@
+# Stage 1: BUILD - Contains source code and build tools
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster package management
+RUN pip install uv
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+
+# Copy source code
+COPY . .
+
+# Compile Python to bytecode (removes .py files, keeps .pyc)
+RUN python -m compileall -b . && \
+    find . -name "*.py" -delete && \
+    find . -name "__pycache__" -exec mv {} {}.compiled \;
+
+# Create a wheel package (optional - for more advanced obfuscation)
+RUN pip install build && \
+    python -m build --wheel
+
+# Stage 2: PRODUCTION - Minimal runtime without source code
+FROM python:3.12-slim AS production
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/* && \
+    pip install uv
+
+# Copy requirements and install runtime dependencies
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+
+# Copy only compiled bytecode from builder stage
+COPY --from=builder /build/*.pyc ./
+COPY --from=builder /build/__pycache__.compiled ./__pycache__
+COPY --from=builder /build/patches ./patches/
+
+# Copy any necessary config files (but not source .py files)
+COPY --from=builder /build/coral-agent.toml ./
+
+# Create entrypoint script to run compiled bytecode
+RUN echo '#!/bin/bash\npython -c "import main; main.main()"' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+EXPOSE 5555
+
+CMD ["/app/entrypoint.sh"]

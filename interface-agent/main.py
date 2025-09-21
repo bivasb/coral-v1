@@ -1,6 +1,5 @@
 import asyncio  # Manages asynchronous operations
 import os  # Provide interaction with the operating system.
-from time import sleep
 
 from camel.agents import ChatAgent  # creates Agents
 from camel.models import ModelFactory  # encapsulates LLM
@@ -27,13 +26,28 @@ async def main():
         print("Connected to coral server.")
         camel_agent = await create_interface_agent(mcp_toolkit)
 
-        # Step the agent continuously
-        for i in range(20):  #This should be infinite, but for testing we limit it to 20 to avoid accidental API fees
-            resp = await camel_agent.astep(get_user_message())
-            msgzero = resp.msgs[0]
-            msgzerojson = msgzero.to_dict()
-            print(msgzerojson)
-            sleep(10)
+        # Let the agent run autonomously like the unified debug agent
+        first_run = True
+        while True:
+            try:
+                if first_run:
+                    # On first run, explicitly tell the agent to start listening
+                    resp = await camel_agent.astep("Start by calling wait_for_mentions tool to listen for messages")
+                    first_run = False
+                else:
+                    # On subsequent runs, let the agent continue autonomously
+                    resp = await camel_agent.astep("")
+                
+                if resp.msgs:
+                    msgzero = resp.msgs[0]
+                    msgzerojson = msgzero.to_dict()
+                    print("Agent response:", msgzerojson)
+                
+                # Small delay to prevent overwhelming the system
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"Error in agent loop: {e}")
+                await asyncio.sleep(5)
     finally:
         await mcp_toolkit.disconnect()
 
@@ -44,11 +58,17 @@ async def create_interface_agent(connected_mcp_toolkit):
             You are a helpful assistant responsible for interacting with the user and working with other agents to meet the user's requests. You can interact with other agents using the chat tools.
             User interaction is your speciality. You identify as "{os.getenv("CORAL_AGENT_ID", default = "N/A")}".
             
-            As a user interaction agent, only you can interact with the user. Use the user_input tool to get new tasks from the user.
+            **WORKFLOW PROCESS:**
+            
+            1. **Listen for Messages**: Start by calling the wait_for_mentions tool (timeoutMs: 30000) to transition to listening state and receive new messages from other agents or users.
+            
+            2. **User Interaction**: As a user interaction agent, only you can interact with the user. Use the user_input tool to get new tasks from the user when needed.
+            
+            3. **Agent Collaboration**: Work with other agents to meet user requests. Make sure to put the name of the agent(s) you are talking to in the mentions field of the send message tool.
+            
+            4. **Continuous Operation**: After handling any messages, return to step 1 to wait for new mentions.
             
             Make sure that all information comes from reliable sources and that all calculations are done using the appropriate tools by the appropriate agents. Make sure your responses are much more reliable than guesses! You should make sure no agents are guessing too, by suggesting the relevant agents to do each part of a task to the agents you are working with. Do a refresh of the available agents before asking the user for input.
-            
-            Make sure to put the name of the agent(s) you are talking to in the mentions field of the send message tool.
             
             {os.getenv("CORAL_PROMPT_SYSTEM", default = "")}
             
